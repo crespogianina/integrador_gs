@@ -25,10 +25,10 @@ export function FilterPanel({ filtros, onChange, onReset }: Props) {
         <div className="flex flex-wrap gap-2">
           {[
             { value: 'ninguna', label: 'Sin restricción' },
-            { value: 'vegetariano', label: '🥦 Vegetariano' },
-            { value: 'vegano', label: '🌱 Vegano' },
-            { value: 'sin_gluten', label: '🌾 Sin gluten' },
-            { value: 'sin_lactosa', label: '🥛 Sin lactosa' },
+            { value: 'vegetariano', label: 'Vegetariano' },
+            { value: 'vegano', label: 'Vegano' },
+            { value: 'sin_gluten', label: 'Sin gluten' },
+            { value: 'sin_lactosa', label: 'Sin lactosa' },
           ].map(({ value, label }) => (
             <button
               key={value}
@@ -36,6 +36,55 @@ export function FilterPanel({ filtros, onChange, onReset }: Props) {
               className={`px-3 py-1.5 rounded-xl font-body text-xs font-medium transition-all duration-150 ${
                 filtros.dieta === value
                   ? 'bg-herb text-white'
+                  : 'bg-cream text-muted hover:text-bark border border-bark/10'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Momento del día */}
+      <div>
+        <label className="font-body text-xs text-muted uppercase tracking-wider mb-2 block">Momento del día</label>
+        <div className="grid grid-cols-4 gap-1.5">
+          {([
+            { value: 'cualquiera', label: 'Cualquiera' },
+            { value: 'desayuno', label: 'Desayuno' },
+            { value: 'almuerzo', label: 'Almuerzo' },
+            { value: 'cena', label: 'Cena' },
+          ] as const).map(({ value, label }) => (
+            <button
+              key={value}
+              onClick={() => set('momento', value)}
+              className={`py-2 rounded-xl font-body text-xs font-medium transition-all duration-150 ${
+                filtros.momento === value
+                  ? 'bg-gold text-white'
+                  : 'bg-cream text-muted hover:text-bark border border-bark/10'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Dulce o salado */}
+      <div>
+        <label className="font-body text-xs text-muted uppercase tracking-wider mb-2 block">Tipo de plato</label>
+        <div className="grid grid-cols-3 gap-1.5">
+          {([
+            { value: 'cualquiera', label: 'Cualquiera' },
+            { value: 'salado', label: 'Salado' },
+            { value: 'dulce', label: 'Dulce' },
+          ] as const).map(({ value, label }) => (
+            <button
+              key={value}
+              onClick={() => set('sabor', value)}
+              className={`py-2 rounded-xl font-body text-xs font-medium transition-all duration-150 ${
+                filtros.sabor === value
+                  ? 'bg-spice text-white'
                   : 'bg-cream text-muted hover:text-bark border border-bark/10'
               }`}
             >

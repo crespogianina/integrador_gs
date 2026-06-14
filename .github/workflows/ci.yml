@@ -1,4 +1,4 @@
-name: CI/CD — RecetasIA
+name: CI/CD — FoodAlchemy
 
 on:
   push:
@@ -9,7 +9,7 @@ on:
 jobs:
   # ── Frontend ────────────────────────────────────────────────────────────────
   frontend:
-    name: Frontend — Type check & Build
+    name: FoodAlchemy — Frontend (type check & build)
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -32,6 +32,9 @@ jobs:
 
       - name: Build
         run: npm run build
+        env:
+          # En CI no hay backend local; build con URL vacía (Vercel inyecta la real en deploy)
+          VITE_API_URL: ''
 
       - name: Deploy to Vercel
         if: github.ref == 'refs/heads/main'
@@ -45,7 +48,7 @@ jobs:
 
   # ── Backend ─────────────────────────────────────────────────────────────────
   backend:
-    name: Backend — Lint & Deploy
+    name: FoodAlchemy — Backend (syntax check)
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -62,7 +65,10 @@ jobs:
         run: pip install -r requirements.txt
 
       - name: Check syntax
-        run: python -m py_compile main.py && echo "✓ Syntax OK"
+        run: |
+          python -m py_compile main.py
+          python -m py_compile services/gemini_service.py
+          python -m py_compile api/v1/endpoints/auth.py
+          echo "Syntax OK"
 
-      # Render hace autodeploy desde GitHub, no necesita step extra
-      # Solo verificamos que el código compila bien
+      # Render hace autodeploy desde GitHub al conectar el repo; no requiere step extra aquí.

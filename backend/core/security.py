@@ -1,0 +1,42 @@
+from datetime import datetime, timedelta, timezone
+from typing import Any
+from uuid import UUID
+
+from jose import JWTError, jwt
+from passlib.context import CryptContext
+
+from core.config import settings
+
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+__all__ = [
+    "hash_password",
+    "verify_password",
+    "create_access_token",
+    "decode_access_token",
+]
+
+
+def hash_password(password: str) -> str:
+    return pwd_context.hash(password)
+
+
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+    return pwd_context.verify(plain_password, hashed_password)
+
+
+def create_access_token(subject: UUID | str, expires_delta: timedelta | None = None) -> str:
+    expire = datetime.now(timezone.utc) + (
+        expires_delta or timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+    )
+    payload: dict[str, Any] = {"sub": str(subject), "exp": expire}
+    return jwt.encode(payload, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
+
+
+def decode_access_token(token: str) -> str | None:
+    try:
+        payload = jwt.decode(token, settings.JWT_SECRET_KEY, algorithms=[settings.JWT_ALGORITHM])
+        subject = payload.get("sub")
+        return str(subject) if subject else None
+    except JWTError:
+        return None
