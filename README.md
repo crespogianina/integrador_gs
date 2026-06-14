@@ -2,6 +2,8 @@
 
 Generá recetas con IA a partir de los ingredientes que tenés en la heladera. La app combina **Gemini** para crear platos, **PostgreSQL** para usuarios y favoritos, **Unsplash** para fotos, y una interfaz React pensada para móvil y escritorio.
 
+Desarrollada con asistencia de **Cursor**, **Claude** y **Google Gemini**.
+
 ---
 
 ## Tabla de contenidos
@@ -16,7 +18,7 @@ Generá recetas con IA a partir de los ingredientes que tenés en la heladera. L
 8. [Variables de entorno](#variables-de-entorno)
 9. [API](#api)
 10. [Deploy en producción (paso a paso)](#deploy-en-producción-paso-a-paso)
-11. [CI/CD](#cicd)
+11. [CI/CD y Agentes de IA](#cicd-y-agentes-de-ia)
 12. [Informe técnico](#informe-técnico)
 
 ---
@@ -24,6 +26,7 @@ Generá recetas con IA a partir de los ingredientes que tenés en la heladera. L
 ## Funcionalidades
 
 ### Generación de recetas
+
 - Input de ingredientes con chips, sugerencias rápidas, pegado con comas y contador.
 - Generación de **3 recetas** con Google Gemini, optimizadas según los ingredientes disponibles.
 - Filtros: dieta (vegetariano, vegano, sin gluten, sin lactosa), porciones, complejidad, tiempo máximo, **momento del día** (desayuno / almuerzo / cena) y **tipo de plato** (dulce / salado).
@@ -32,16 +35,19 @@ Generá recetas con IA a partir de los ingredientes que tenés en la heladera. L
 - Dieta preferida del perfil se aplica automáticamente si no elegís otra en los filtros.
 
 ### Recetas y UI
+
 - Cards con imagen (Unsplash), pasos expandibles, tip del chef, escala de porciones y lista de compras.
 - Copiar receta completa al portapapeles.
 - Imágenes más precisas gracias al campo `busqueda_imagen` generado por la IA.
 
 ### Cuenta y datos
+
 - Registro, login y perfil con JWT.
 - Favoritos guardados en PostgreSQL (no en localStorage).
 - Comunidad: compartir recetas con nombre de autor, persistidas en base de datos.
 
 ### Experiencia
+
 - Dark mode, toasts, navegación móvil inferior, PWA (`manifest.json`).
 - Comunidad visible sin login; generar, favoritos y perfil requieren cuenta.
 
@@ -49,29 +55,30 @@ Generá recetas con IA a partir de los ingredientes que tenés en la heladera. L
 
 ## Demo en vivo
 
-> Completá estas URLs después del deploy. Guía detallada: **[DEPLOY.md](./DEPLOY.md)**
+| Recurso            | URL                                            |
+| ------------------ | ---------------------------------------------- |
+| **App (frontend)** | https://integradorgs-frontend.vercel.app       |
+| **API (backend)**  | https://integrador-gs.onrender.com             |
+| **Swagger**        | https://integrador-gs.onrender.com/docs        |
+| **Repositorio**    | https://github.com/crespogianina/integrador_gs |
 
-| Recurso | URL |
-|---------|-----|
-| **App (frontend)** | _pendiente — ej. `https://foodalchemy.vercel.app`_ |
-| **API (backend)** | _pendiente — ej. `https://foodalchemy-api.onrender.com`_ |
-| **Swagger** | _pendiente — ej. `https://foodalchemy-api.onrender.com/docs`_ |
-| **Repositorio** | [github.com/crespogianina/integrador_gs](https://github.com/crespogianina/integrador_gs) |
+> El backend corre en el plan free de Render — la primera request puede tardar hasta 60 segundos si estuvo inactivo.
 
 ---
 
 ## Stack tecnológico
 
-| Capa | Tecnología |
-|------|------------|
-| Frontend | React 18, TypeScript, Vite, Tailwind CSS, React Router |
-| Backend | FastAPI, Python 3.11+, SQLAlchemy, Alembic |
-| Base de datos | PostgreSQL 16 (Docker local) |
-| Autenticación | JWT (python-jose + passlib/bcrypt) |
-| IA | Google Gemini (`gemini-2.5-flash-lite` por defecto) |
-| Imágenes | Unsplash API |
-| Deploy | Vercel (frontend), Render (backend) |
-| CI/CD | GitHub Actions |
+| Capa            | Tecnología                                             |
+| --------------- | ------------------------------------------------------ |
+| Frontend        | React 18, TypeScript, Vite, Tailwind CSS, React Router |
+| Backend         | FastAPI, Python 3.11+, SQLAlchemy, Alembic             |
+| Base de datos   | PostgreSQL 16                                          |
+| Autenticación   | JWT (python-jose + passlib/bcrypt)                     |
+| IA (runtime)    | Google Gemini (`gemini-2.5-flash-lite`)                |
+| IA (desarrollo) | Cursor, Claude (Anthropic), Google Gemini              |
+| Imágenes        | Unsplash API                                           |
+| Deploy          | Vercel (frontend), Render (backend + DB)               |
+| CI/CD           | GitHub Actions (build, deploy, agentes de IA)          |
 
 ---
 
@@ -91,12 +98,15 @@ integrador_gs/
 │   ├── src/
 │   │   ├── components/     # RecipeCard, FilterPanel, Navbar…
 │   │   ├── context/        # Auth, Theme, Toast
-│   │   ├── hooks/            # useRecipeGenerator, useRecipeImage…
-│   │   ├── pages/            # Generar, Favoritos, Comunidad, Perfil
+│   │   ├── hooks/          # useRecipeGenerator, useRecipeImage…
+│   │   ├── pages/          # Generar, Favoritos, Comunidad, Perfil
 │   │   └── lib/api.ts
 │   └── public/manifest.json
-├── docker-compose.yml      # PostgreSQL en puerto 5444
-└── .github/workflows/ci.yml
+└── .github/workflows/
+    ├── ci.yml                    # CI/CD principal
+    ├── ai_generador_changelog.yml  # Agente: changelog automático
+    ├── ai_pr_review.yml            # Agente: revisión de PRs
+    └── ai_security_audit.yml       # Agente: auditoría de seguridad
 ```
 
 ---
@@ -106,11 +116,12 @@ integrador_gs/
 Antes de empezar, instalá:
 
 1. **Git**
-2. **Node.js 20+** y npm
+2. **Node.js 22+** y npm
 3. **Python 3.11+**
-4. **Docker Desktop** (para PostgreSQL local)
-5. **API key de Gemini** → [Google AI Studio](https://aistudio.google.com/apikey)
-6. *(Opcional)* **Access Key de Unsplash** → [Unsplash Developers](https://unsplash.com/developers)
+4. **API key de Gemini** → [Google AI Studio](https://aistudio.google.com/apikey)
+5. _(Opcional)_ **Access Key de Unsplash** → [Unsplash Developers](https://unsplash.com/developers)
+
+> Para desarrollo local necesitás una base de datos PostgreSQL. Podés usar [Render](https://render.com) gratis o instalarlo localmente.
 
 ---
 
@@ -119,27 +130,11 @@ Antes de empezar, instalá:
 ### Paso 1 — Clonar el repositorio
 
 ```bash
-git clone https://github.com/TU_USUARIO/integrador_gs.git
+git clone https://github.com/crespogianina/integrador_gs.git
 cd integrador_gs
 ```
 
-### Paso 2 — Levantar PostgreSQL con Docker
-
-Desde la raíz del proyecto:
-
-```bash
-docker compose up -d
-```
-
-Verificá que el contenedor esté sano:
-
-```bash
-docker compose ps
-```
-
-PostgreSQL queda expuesto en **`localhost:5444`** (usuario `foodalchemy`, contraseña `foodalchemy_dev`, base `foodalchemy`).
-
-### Paso 3 — Configurar y arrancar el backend
+### Paso 2 — Configurar y arrancar el backend
 
 ```bash
 cd backend
@@ -156,15 +151,14 @@ Instalar dependencias y configurar entorno:
 
 ```bash
 pip install -r requirements.txt
-copy .env.example .env        # Windows
-# cp .env.example .env        # macOS / Linux
+cp .env.example .env
 ```
 
 Editá `backend/.env` con estos valores mínimos:
 
 ```env
 GEMINI_API_KEY=tu-api-key-de-gemini
-DATABASE_URL=postgresql+psycopg2://foodalchemy:foodalchemy_dev@localhost:5444/foodalchemy
+DATABASE_URL=postgresql+psycopg2://usuario:password@host:5432/foodalchemy
 JWT_SECRET_KEY=un-secreto-largo-y-aleatorio
 ```
 
@@ -181,15 +175,14 @@ Comprobaciones:
 
 > Las tablas se crean automáticamente al iniciar la API (`create_all` en el lifespan).
 
-### Paso 4 — Configurar y arrancar el frontend
+### Paso 3 — Configurar y arrancar el frontend
 
 En otra terminal:
 
 ```bash
 cd frontend
 npm install
-copy .env.example .env        # Windows
-# cp .env.example .env        # macOS / Linux
+cp .env.example .env
 ```
 
 Para desarrollo local, dejá **`VITE_API_URL` vacío** para usar el proxy de Vite hacia `localhost:8000`:
@@ -207,15 +200,14 @@ npm run dev
 
 Abrí [http://localhost:5173](http://localhost:5173).
 
-### Paso 5 — Verificar que todo funciona
+### Paso 4 — Verificar que todo funciona
 
 1. Entrá a `/register` y creá una cuenta.
 2. Iniciá sesión en `/login`.
-3. En la página principal, agregá ingredientes (ej. `tomate`, `huevo`, `queso`).
-4. Opcional: abrí **Filtros** y elegí dieta, momento del día o tipo de plato.
-5. Tocá **Generar recetas** y esperá las 3 propuestas.
-6. Guardá una en favoritos y visitá `/favoritos`.
-7. Compartí una receta en `/comunidad`.
+3. Agregá ingredientes (ej. `tomate`, `huevo`, `queso`).
+4. Tocá **Generar recetas** y esperá las 3 propuestas.
+5. Guardá una en favoritos y visitá `/favoritos`.
+6. Compartí una receta en `/comunidad`.
 
 ---
 
@@ -247,22 +239,22 @@ Abrí [http://localhost:5173](http://localhost:5173).
 
 ### Backend (`backend/.env`)
 
-| Variable | Descripción | Ejemplo |
-|----------|-------------|---------|
-| `GEMINI_API_KEY` | API key de Google Gemini | `AIzaSy...` |
-| `DATABASE_URL` | Conexión PostgreSQL | `postgresql+psycopg2://foodalchemy:foodalchemy_dev@localhost:5444/foodalchemy` |
-| `JWT_SECRET_KEY` | Secreto para firmar tokens JWT | string largo y aleatorio |
-| `JWT_ALGORITHM` | Algoritmo JWT | `HS256` |
-| `ACCESS_TOKEN_EXPIRE_MINUTES` | Duración del token | `10080` (7 días) |
-| `GEMINI_MODEL` | Modelo de Gemini | `gemini-2.5-flash-lite` |
-| `CORS_ORIGINS` | Orígenes permitidos (`*` o lista separada por comas) | `*` |
+| Variable                      | Descripción                    | Ejemplo                                   |
+| ----------------------------- | ------------------------------ | ----------------------------------------- |
+| `GEMINI_API_KEY`              | API key de Google Gemini       | `AIzaSy...`                               |
+| `DATABASE_URL`                | Conexión PostgreSQL            | `postgresql+psycopg2://user:pass@host/db` |
+| `JWT_SECRET_KEY`              | Secreto para firmar tokens JWT | string largo y aleatorio                  |
+| `JWT_ALGORITHM`               | Algoritmo JWT                  | `HS256`                                   |
+| `ACCESS_TOKEN_EXPIRE_MINUTES` | Duración del token             | `10080` (7 días)                          |
+| `GEMINI_MODEL`                | Modelo de Gemini               | `gemini-2.5-flash-lite`                   |
+| `CORS_ORIGINS`                | Orígenes permitidos            | `https://tu-app.vercel.app`               |
 
 ### Frontend (`frontend/.env`)
 
-| Variable | Descripción | Desarrollo | Producción |
-|----------|-------------|------------|------------|
-| `VITE_API_URL` | URL del backend | Vacío (usa proxy Vite) | `https://tu-backend.onrender.com` |
-| `VITE_UNSPLASH_ACCESS_KEY` | Key de Unsplash para fotos | Tu access key | Tu access key |
+| Variable                   | Descripción                | Desarrollo             | Producción                           |
+| -------------------------- | -------------------------- | ---------------------- | ------------------------------------ |
+| `VITE_API_URL`             | URL del backend            | Vacío (usa proxy Vite) | `https://integrador-gs.onrender.com` |
+| `VITE_UNSPLASH_ACCESS_KEY` | Key de Unsplash para fotos | Tu access key          | Tu access key                        |
 
 ---
 
@@ -270,87 +262,81 @@ Abrí [http://localhost:5173](http://localhost:5173).
 
 Documentación interactiva en `/docs` cuando el backend está corriendo.
 
-| Método | Ruta | Auth | Descripción |
-|--------|------|------|-------------|
-| `POST` | `/auth/register` | No | Registrar usuario |
-| `POST` | `/auth/login` | No | Login (JSON) |
-| `POST` | `/auth/token` | No | Login OAuth2 (Swagger) |
-| `GET` | `/auth/me` | Sí | Perfil actual |
-| `PATCH` | `/auth/me` | Sí | Actualizar perfil |
-| `POST` | `/api/recetas` | Sí | Generar recetas con Gemini |
-| `GET` | `/recipes` | Sí | Listar favoritos |
-| `POST` | `/recipes` | Sí | Guardar favorito |
-| `DELETE` | `/recipes/{id}` | Sí | Eliminar favorito |
-| `GET` | `/api/comunidad` | No | Listar recetas compartidas |
-| `POST` | `/api/comunidad` | Sí | Compartir receta |
-| `GET` | `/` | No | Health check |
+| Método   | Ruta             | Auth | Descripción                |
+| -------- | ---------------- | ---- | -------------------------- |
+| `POST`   | `/auth/register` | No   | Registrar usuario          |
+| `POST`   | `/auth/login`    | No   | Login (JSON)               |
+| `POST`   | `/auth/token`    | No   | Login OAuth2 (Swagger)     |
+| `GET`    | `/auth/me`       | Sí   | Perfil actual              |
+| `PATCH`  | `/auth/me`       | Sí   | Actualizar perfil          |
+| `POST`   | `/api/recetas`   | Sí   | Generar recetas con Gemini |
+| `GET`    | `/recipes`       | Sí   | Listar favoritos           |
+| `POST`   | `/recipes`       | Sí   | Guardar favorito           |
+| `DELETE` | `/recipes/{id}`  | Sí   | Eliminar favorito          |
+| `GET`    | `/api/comunidad` | No   | Listar recetas compartidas |
+| `POST`   | `/api/comunidad` | Sí   | Compartir receta           |
+| `GET`    | `/`              | No   | Health check               |
 
 ---
 
 ## Deploy en producción (paso a paso)
 
-Guía completa con checklist, CORS, secrets de GitHub y troubleshooting: **[DEPLOY.md](./DEPLOY.md)**
+Guía completa: **[DEPLOY.md](./DEPLOY.md)**
 
 Resumen rápido:
-### Paso 1 — Base de datos en Render
 
-1. Creá una instancia **PostgreSQL** en [Render](https://render.com).
-2. Copiá la **Internal Database URL** (formato `postgresql://...`).
-3. Convertila al formato SQLAlchemy: reemplazá `postgresql://` por `postgresql+psycopg2://`.
-
-### Paso 2 — Backend en Render
-
-1. Creá un **Web Service** conectado al repo de GitHub.
-2. Configuración:
-   - **Root Directory:** `backend`
-   - **Build Command:** `pip install -r requirements.txt`
-   - **Start Command:** `uvicorn main:app --host 0.0.0.0 --port $PORT`
-3. Variables de entorno:
-   - `GEMINI_API_KEY`
-   - `DATABASE_URL` (URL de Render con `postgresql+psycopg2://`)
-   - `JWT_SECRET_KEY` (secreto fuerte, distinto al de desarrollo)
-   - `CORS_ORIGINS` → URL de tu frontend en Vercel (ej. `https://tu-app.vercel.app`)
-4. Deploy y copiá la URL pública del servicio (ej. `https://foodalchemy-api.onrender.com`).
-
-### Paso 3 — Frontend en Vercel
-
-1. Importá el repo en [Vercel](https://vercel.com).
-2. **Root Directory:** `frontend`
-3. Variables de entorno:
-   - `VITE_API_URL=https://tu-backend.onrender.com`
-   - `VITE_UNSPLASH_ACCESS_KEY=tu-key`
-4. Deploy.
-
-### Paso 4 — Verificación final
-
-1. Abrí la URL de Vercel.
-2. Registrate e iniciá sesión.
-3. Generá una receta y confirmá que favoritos y comunidad persisten tras recargar.
+1. **PostgreSQL en Render** → copiar Internal Database URL
+2. **Backend en Render** → Root Directory: `backend`, Start Command: `uvicorn main:app --host 0.0.0.0 --port $PORT`
+3. **Frontend en Vercel** → Root Directory: `frontend`, agregar `VITE_API_URL`
+4. **CORS** → actualizar `CORS_ORIGINS` en Render con la URL de Vercel
 
 ---
 
-## CI/CD
+## CI/CD y Agentes de IA
 
-El workflow `.github/workflows/ci.yml` se ejecuta en cada push y PR a `main`:
+El proyecto incluye 4 workflows en `.github/workflows/`:
 
-- **Frontend:** `tsc`, build y deploy a Vercel (solo en `main`).
-- **Backend:** verificación de sintaxis Python (Render hace autodeploy desde GitHub).
+### CI/CD principal (`ci.yml`)
 
-Secrets necesarios en GitHub:
+Se ejecuta en cada push y PR a `main`:
 
-- `VERCEL_TOKEN`
-- `VERCEL_ORG_ID`
-- `VERCEL_PROJECT_ID`
+- **Frontend:** type check TypeScript → build → deploy automático a Vercel
+- **Backend:** verificación de sintaxis Python → Render hace autodeploy desde GitHub
+
+### Agente: Generador de Changelog (`ai_generador_changelog.yml`)
+
+Se activa en cada push a `main`. Toma los últimos commits, los procesa con Gemini y actualiza `CHANGELOG.md` automáticamente.
+
+### Agente: Revisión de PRs (`ai_pr_review.yml`)
+
+Se activa al abrir o actualizar un Pull Request. Analiza el diff del código con Gemini y comenta automáticamente en el PR con puntos positivos, sugerencias y revisión de seguridad.
+
+### Agente: Auditoría de Seguridad (`ai_security_audit.yml`)
+
+Corre en cada push a `main` y todos los lunes. Usa Bandit + Safety para analizar el código Python, manda los resultados a Gemini y crea un issue automático si detecta problemas.
+
+### Secrets necesarios en GitHub
+
+| Secret              | Descripción                     |
+| ------------------- | ------------------------------- |
+| `VERCEL_TOKEN`      | Token de Vercel para deploy     |
+| `VERCEL_ORG_ID`     | ID de la organización en Vercel |
+| `VERCEL_PROJECT_ID` | ID del proyecto en Vercel       |
+| `GEMINI_API_KEY`    | API key para los agentes de IA  |
 
 ---
 
 ## Informe técnico
 
-Documentación ampliada del proyecto: [INFORME.md](./INFORME.md)
+Documentación ampliada del proyecto (arsenal de IA, prompt engineering, desafíos, lecciones aprendidas): **[INFORME.md](./INFORME.md)**
 
 ---
 
 ## IA utilizada
 
-- **Google Gemini** — generación de recetas en tiempo real.
-- **Unsplash** — imágenes ilustrativas en las cards (query optimizada por la IA).
+| Herramienta            | Rol                                                                |
+| ---------------------- | ------------------------------------------------------------------ |
+| **Cursor**             | Editor con IA integrada — implementación principal del proyecto    |
+| **Claude (Anthropic)** | Corrección de código, análisis de bugs, debugging de CORS y deploy |
+| **Google Gemini**      | Diseño de prompts + generación de recetas en runtime               |
+| **Unsplash API**       | Imágenes ilustrativas en las cards                                 |

@@ -10,7 +10,7 @@ Necesitás:
 
 - Cuenta en [GitHub](https://github.com), [Render](https://render.com) y [Vercel](https://vercel.com)
 - API key de [Google Gemini](https://aistudio.google.com/apikey)
-- *(Opcional)* Access key de [Unsplash](https://unsplash.com/developers)
+- _(Opcional)_ Access key de [Unsplash](https://unsplash.com/developers)
 - Código pusheado a la rama **`main`** del repo público
 
 ---
@@ -19,20 +19,10 @@ Necesitás:
 
 ### 1.1 Repo público
 
-1. Abrí `https://github.com/TU_USUARIO/integrador_gs`
-2. **Settings** → **General** → **Danger Zone** → **Change repository visibility** → **Public**
+1. Abrí `https://github.com/crespogianina/integrador_gs`
+2. Confirmá que el repo sea público (visible sin login)
 
-### 1.2 Mergear a `main`
-
-El CI/CD y Render despliegan desde `main`:
-
-```bash
-git checkout main
-git merge fixes-login-y-datos   # o tu rama de trabajo
-git push origin main
-```
-
-### 1.3 Compartir con el docente
+### 1.2 Compartir con el docente
 
 - Enviá el link del repo, **o**
 - **Settings** → **Collaborators** → agregar el usuario del docente
@@ -43,14 +33,14 @@ git push origin main
 
 1. Entrá a [dashboard.render.com](https://dashboard.render.com)
 2. **New +** → **PostgreSQL**
-3. Configuración sugerida:
+3. Configuración:
    - **Name:** `foodalchemy-db`
-   - **Database:** `foodalchemy`
-   - **User:** `foodalchemy`
+   - **Database:** `foodalchemy_db`
+   - **User:** `foodalchemy_db_user`
    - **Plan:** Free
 4. **Create Database**
 5. Esperá a que esté **Available**
-6. En la pestaña **Info**, copiá **Internal Database URL** (la usarás en el backend)
+6. En la pestaña **Info**, copiá **Internal Database URL**
 
 > El backend normaliza automáticamente `postgresql://` a `postgresql+psycopg2://`. Podés pegar la URL de Render tal cual.
 
@@ -58,61 +48,53 @@ git push origin main
 
 ## Paso 3 — Backend (API) en Render
 
-### Opción A — Blueprint (recomendada si empezás de cero)
-
-1. **New +** → **Blueprint**
-2. Conectá el repo `integrador_gs`
-3. Render lee `render.yaml` y crea DB + Web Service
-4. Completá manualmente en el dashboard:
-   - `GEMINI_API_KEY` → tu key de Gemini
-   - `CORS_ORIGINS` → lo configurás en el Paso 5 (después de tener la URL de Vercel)
-
-### Opción B — Web Service manual
-
 1. **New +** → **Web Service**
 2. Conectá el repo de GitHub
 3. Configuración:
 
-| Campo | Valor |
-|-------|-------|
-| **Name** | `foodalchemy-api` |
-| **Root Directory** | `backend` |
-| **Runtime** | Python 3 |
-| **Build Command** | `pip install -r requirements.txt` |
-| **Start Command** | `uvicorn main:app --host 0.0.0.0 --port $PORT` |
-| **Plan** | Free |
+| Campo              | Valor                                          |
+| ------------------ | ---------------------------------------------- |
+| **Name**           | `integrador_gs`                                |
+| **Root Directory** | `backend`                                      |
+| **Runtime**        | Python 3                                       |
+| **Build Command**  | `pip install -r requirements.txt`              |
+| **Start Command**  | `uvicorn main:app --host 0.0.0.0 --port $PORT` |
+| **Plan**           | Free                                           |
 
-4. **Environment Variables** (Environment):
+4. **Environment Variables**:
 
-| Key | Valor |
-|-----|-------|
-| `GEMINI_API_KEY` | Tu API key de Gemini |
-| `DATABASE_URL` | Internal Database URL del Paso 2 |
-| `JWT_SECRET_KEY` | String largo aleatorio (distinto al de local) |
-| `JWT_ALGORITHM` | `HS256` |
-| `GEMINI_MODEL` | `gemini-2.5-flash-lite` |
-| `CORS_ORIGINS` | Temporalmente `*`; luego la URL de Vercel |
+| Key              | Valor                                             |
+| ---------------- | ------------------------------------------------- |
+| `GEMINI_API_KEY` | Tu API key de Gemini                              |
+| `DATABASE_URL`   | Internal Database URL del Paso 2                  |
+| `JWT_SECRET_KEY` | String largo aleatorio                            |
+| `JWT_ALGORITHM`  | `HS256`                                           |
+| `GEMINI_MODEL`   | `gemini-2.5-flash-lite`                           |
+| `CORS_ORIGINS`   | `*` (temporalmente; actualizá después del Paso 4) |
 
-5. **Create Web Service** y esperá el primer deploy (5–10 min)
-6. Copiá la URL pública, ej: `https://foodalchemy-api.onrender.com`
+5. **Create Web Service** y esperá el primer deploy (~5 min)
 
-### 3.1 Verificar backend
+### Verificar backend
 
 Abrí en el navegador:
 
 ```
-https://TU-API.onrender.com/
+https://integrador-gs.onrender.com/
 ```
 
 Deberías ver:
 
 ```json
-{"status":"ok","message":"FoodAlchemy API funcionando","model":"gemini-2.5-flash-lite"}
+{
+  "status": "ok",
+  "message": "FoodAlchemy API funcionando",
+  "model": "gemini-2.5-flash-lite"
+}
 ```
 
-Swagger: `https://TU-API.onrender.com/docs`
+Swagger: `https://integrador-gs.onrender.com/docs`
 
-> **Nota:** el plan free de Render “duerme” la API tras inactividad. La primera request puede tardar ~30–60 s.
+> **Nota:** el plan free de Render "duerme" la API tras inactividad. La primera request puede tardar ~30–60 s.
 
 ---
 
@@ -122,78 +104,64 @@ Swagger: `https://TU-API.onrender.com/docs`
 2. **Import** del repo `integrador_gs`
 3. Configuración:
 
-| Campo | Valor |
-|-------|-------|
-| **Framework Preset** | Vite |
-| **Root Directory** | `frontend` |
-| **Build Command** | `npm run build` (default) |
-| **Output Directory** | `dist` (default) |
+| Campo                | Valor           |
+| -------------------- | --------------- |
+| **Framework Preset** | Vite            |
+| **Root Directory**   | `frontend`      |
+| **Build Command**    | `npm run build` |
+| **Output Directory** | `dist`          |
 
 4. **Environment Variables**:
 
-| Key | Valor |
-|-----|-------|
-| `VITE_API_URL` | `https://TU-API.onrender.com` (sin barra final) |
-| `VITE_UNSPLASH_ACCESS_KEY` | Tu access key de Unsplash (opcional) |
+| Key                        | Valor                                |
+| -------------------------- | ------------------------------------ |
+| `VITE_API_URL`             | `https://integrador-gs.onrender.com` |
+| `VITE_UNSPLASH_ACCESS_KEY` | Tu access key de Unsplash            |
 
 5. **Deploy**
-6. Copiá la URL de producción, ej: `https://foodalchemy.vercel.app`
 
-El archivo `frontend/vercel.json` ya incluye rewrites para React Router (`/favoritos`, `/login`, etc.).
+La URL de producción es: `https://integradorgs-frontend.vercel.app`
 
 ---
 
 ## Paso 5 — CORS en el backend
 
-Volvé a Render → tu Web Service → **Environment**:
-
-1. Editá `CORS_ORIGINS` con la URL exacta de Vercel:
+Volvé a Render → `integrador_gs` → **Environment** → editá `CORS_ORIGINS`:
 
 ```
-https://foodalchemy.vercel.app
+https://integradorgs-frontend.vercel.app
 ```
 
-Si tenés preview domains, podés usar varias separadas por coma:
-
-```
-https://foodalchemy.vercel.app,https://integrador-gs.vercel.app
-```
-
-2. **Save Changes** → Render redeployea solo
+**Save Changes** → Render redeployea automáticamente.
 
 ---
 
-## Paso 6 — CI/CD con GitHub Actions (Vercel automático)
+## Paso 6 — CI/CD con GitHub Actions
 
-Para que cada push a `main` despliegue el frontend:
+Para que cada push a `main` despliegue el frontend automáticamente:
 
 ### 6.1 Obtener tokens de Vercel
 
 1. [vercel.com/account/tokens](https://vercel.com/account/tokens) → **Create** → copiá el token
-2. En el proyecto de Vercel → **Settings** → **General**:
-   - Copiá **Project ID**
-3. En **Team Settings** (o cuenta personal) → **General**:
-   - Copiá **Team ID** (= `VERCEL_ORG_ID`)
+2. En el proyecto de Vercel → **Settings** → **General** → copiá **Project ID**
+3. En **Team Settings** → **General** → copiá **Team ID**
 
 ### 6.2 Secrets en GitHub
 
 Repo → **Settings** → **Secrets and variables** → **Actions** → **New repository secret**:
 
-| Secret | Valor |
-|--------|-------|
-| `VERCEL_TOKEN` | Token del paso 6.1 |
-| `VERCEL_ORG_ID` | Team / Org ID |
-| `VERCEL_PROJECT_ID` | Project ID de Vercel |
-
-### 6.3 Render autodeploy
-
-En Render → Web Service → **Settings** → **Build & Deploy** → activá **Auto-Deploy** en la rama `main`.
+| Secret              | Valor                                         |
+| ------------------- | --------------------------------------------- |
+| `VERCEL_TOKEN`      | Token del paso 6.1                            |
+| `VERCEL_ORG_ID`     | Team ID de Vercel                             |
+| `VERCEL_PROJECT_ID` | Project ID de Vercel                          |
+| `GEMINI_API_KEY`    | Tu API key de Gemini (para los agentes de IA) |
 
 ---
 
-## Paso 7 — Verificación final (checklist)
+## Paso 7 — Verificación final
 
-Marcá cada ítem después de probarlo en la **URL de Vercel** (no en localhost):
+Probá en **https://integradorgs-frontend.vercel.app**:
 
 - [ ] Registro de usuario nuevo
 - [ ] Login y logout
@@ -206,27 +174,11 @@ Marcá cada ítem después de probarlo en la **URL de Vercel** (no en localhost)
 
 ---
 
-## Paso 8 — Actualizar README con links de demo
-
-Editá `README.md` sección **Demo en vivo**:
-
-```markdown
-## Demo en vivo
-
-- **App:** https://foodalchemy.vercel.app
-- **API:** https://foodalchemy-api.onrender.com
-- **Swagger:** https://foodalchemy-api.onrender.com/docs
-```
-
-Hacé commit y push a `main`.
-
----
-
 ## Solución de problemas
 
 ### Failed to fetch (frontend)
 
-- `VITE_API_URL` en Vercel debe ser la URL del backend **con** `https://`
+- `VITE_API_URL` en Vercel debe ser `https://integrador-gs.onrender.com` (sin barra final)
 - Rebuild en Vercel después de cambiar variables (`Deployments` → **Redeploy**)
 - Verificá `CORS_ORIGINS` en Render
 
@@ -249,14 +201,15 @@ Hacé commit y push a `main`.
 ### Base de datos vacía / tablas no existen
 
 - Las tablas se crean al arrancar la API (`create_all` en `main.py`)
-- Revisá logs de Render al primer deploy; si `DATABASE_URL` falla, no conecta
+- Revisá logs de Render al primer deploy
 
 ---
 
-## Resumen de URLs a guardar
+## URLs de producción
 
-| Servicio | URL |
-|----------|-----|
-| Frontend (demo) | `https://____________.vercel.app` |
-| Backend API | `https://____________.onrender.com` |
-| Repo GitHub | `https://github.com/crespogianina/integrador_gs` |
+| Servicio            | URL                                            |
+| ------------------- | ---------------------------------------------- |
+| **Frontend (demo)** | https://integradorgs-frontend.vercel.app       |
+| **Backend API**     | https://integrador-gs.onrender.com             |
+| **Swagger**         | https://integrador-gs.onrender.com/docs        |
+| **Repositorio**     | https://github.com/crespogianina/integrador_gs |

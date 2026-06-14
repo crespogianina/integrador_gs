@@ -18,7 +18,7 @@ Documentación técnica del proyecto: arquitectura, integraciones de IA, decisio
 10. [Frontend: decisiones clave](#frontend-decisiones-clave)
 11. [Desafíos encontrados](#desafíos-encontrados)
 12. [Lecciones aprendidas](#lecciones-aprendidas)
-13. [CI/CD y deploy](#cicd-y-deploy)
+13. [CI/CD y agentes de IA](#cicd-y-agentes-de-ia)
 
 ---
 
@@ -26,65 +26,95 @@ Documentación técnica del proyecto: arquitectura, integraciones de IA, decisio
 
 **FoodAlchemy** es una aplicación full-stack que permite a los usuarios ingresar ingredientes disponibles y recibir recetas generadas por IA, con filtros dietéticos y de contexto (momento del día, dulce/salado), favoritos persistentes, comunidad y una interfaz responsive con dark mode.
 
-Evolucionó desde un prototipo frontend-only (favoritos en `localStorage`, Claude/Anthropic) hacia una arquitectura con **FastAPI + PostgreSQL + JWT + Google Gemini**.
+Desarrollada íntegramente con asistencia de herramientas de IA: **Cursor** para la implementación, **Claude** para análisis y corrección, y **Google Gemini** tanto para el diseño de prompts como para la generación de recetas en runtime.
 
 ---
 
 ## Arsenal de herramientas IA
 
-| Herramienta | Uso |
-|-------------|-----|
-| **Google Gemini** (`gemini-2.5-flash-lite`) | Generación de recetas en runtime vía FastAPI |
-| **Unsplash API** | Fotos ilustrativas en las cards (query optimizada por la IA) |
-| **Cursor / asistentes IA** | Desarrollo asistido, arquitectura, debugging y refactor |
+### Herramientas de desarrollo
+
+| Herramienta            | Rol en el proyecto                                                                                                                                                     |
+| ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Cursor**             | Editor con IA integrada. Herramienta principal de implementación: generación de código, completions en contexto del repo completo, refactor y estructura del proyecto. |
+| **Claude (Anthropic)** | Corrección de código, análisis de bugs complejos, revisión de arquitectura y debugging de problemas de deploy (CORS, JWT, configuración de middlewares).               |
+| **Google Gemini**      | Diseño y ajuste del prompt de generación de recetas. Consultas sobre buenas prácticas de API REST y estructura de schemas Pydantic.                                    |
+
+### Herramientas de runtime
+
+| Herramienta                                 | Uso                                                          |
+| ------------------------------------------- | ------------------------------------------------------------ |
+| **Google Gemini** (`gemini-2.5-flash-lite`) | Generación de recetas en tiempo real vía FastAPI             |
+| **Unsplash API**                            | Fotos ilustrativas en las cards (query optimizada por la IA) |
 
 ---
 
 ## Sinergia con la IA
 
-Esta sección describe **cómo las herramientas de IA participaron en el ciclo de desarrollo**, no solo en runtime.
+### Qué hizo cada herramienta
 
-### Programar y diseñar
+**Cursor** fue la herramienta del día a día. Se usó para:
 
-| Tarea | Cómo ayudó la IA |
-|-------|------------------|
-| **Arquitectura full-stack** | Con Cursor se definió la migración de un frontend aislado (localStorage) a monorepo con FastAPI, PostgreSQL y JWT, manteniendo el frontend en React. |
-| **Estructura de carpetas** | Se generaron convenciones (`core/`, `models/`, `schemas/`, `services/`) alineadas con FastAPI y SQLAlchemy. |
-| **Integración Gemini** | El servicio `gemini_service.py`, el schema de filtros y el endpoint `/api/recetas` se armaron iterando prompts y respuestas esperadas con asistencia IA. |
-| **UI/UX** | Componentes como `FilterPanel`, `RecipeCard`, dark mode y navegación móvil se desarrollaron con sugerencias de layout, iconos (lucide-react) y estados vacíos. |
-| **Campo `busqueda_imagen`** | La IA identificó que Unsplash fallaba con títulos largos de Gemini; se diseñó el campo en el prompt y el fallback en backend/frontend. |
+- Generar la estructura inicial del proyecto (FastAPI + React + PostgreSQL)
+- Escribir endpoints, modelos SQLAlchemy y schemas Pydantic a partir de descripciones en lenguaje natural
+- Completar componentes React con contexto del resto del codebase
+- Refactorizar código manteniendo consistencia de estilo
 
-### Depurar
+**Claude** se usó principalmente para:
 
-| Problema | Rol de la IA |
-|----------|--------------|
-| **`Failed to fetch` en local** | Se diagnosticó que `VITE_API_URL` apuntaba a Render en vez de usar el proxy de Vite; solución documentada en README e `api.ts`. |
-| **CORS** | Se configuró proxy en `vite.config.ts` para dev y `CORSMiddleware` con orígenes explícitos en prod. |
-| **Imágenes incorrectas** | Análisis de que la query usaba el título completo; refactor de `useRecipeImage` + prompt de Gemini. |
-| **Gemini `limit: 0` / 429** | Mensajes de error orientados al usuario y reintentos con backoff en `gemini_service.py`. |
-| **Botones negros en filtros** | Corrección de clases Tailwind para alinear colores con el resto del panel. |
+- Diagnosticar errores que Cursor no resolvía (especialmente CORS, `strict_content_type` de FastAPI y problemas de deploy en Render/Vercel)
+- Revisar código generado y detectar inconsistencias o bugs lógicos
+- Entender el comportamiento de dependencias (FastAPI, SQLAlchemy, passlib)
+- Generar documentación técnica (README, INFORME, DEPLOY)
 
-### Documentar y testear
+**Gemini** se usó para:
 
-| Actividad | Contribución IA |
-|-----------|-----------------|
-| **README e INFORME** | Redacción estructurada paso a paso, alineada al TP integrador (deploy, checklist, arsenal). |
-| **DEPLOY.md** | Guía de Render + Vercel + secrets de GitHub generada a partir del estado real del repo. |
-| **Validación manual** | Checklists de flujos (registro → generar → favoritos → comunidad) para verificar antes de entregar. |
+- Diseñar la estructura del prompt de generación de recetas
+- Iterar sobre las restricciones de dieta, momento del día y tipo de plato
+- Brainstorming del campo `busqueda_imagen` para mejorar las fotos de Unsplash
+- Consultas sobre diseño de APIs REST
 
 ### Prompts que funcionaron mejor
 
-1. **Restricciones en lista con `OBLIGATORIO`** — mejor cumplimiento de dieta, momento y sabor que instrucciones vagas.
+1. **Restricciones con `OBLIGATORIO`** — mejor cumplimiento de dieta, momento y sabor que instrucciones vagas en prosa.
 2. **Esquema JSON completo en el prompt** — menos campos faltantes y menos errores de parseo.
-3. **`busqueda_imagen` en inglés, 2–4 palabras** — fotos de Unsplash mucho más coherentes.
-4. **`clean_json_response()` + regla “sin markdown”** — essential para respuestas estables de Gemini.
+3. **`busqueda_imagen` en inglés, 2-4 palabras** — fotos de Unsplash mucho más coherentes con el plato.
+4. **`clean_json_response()` + regla "sin markdown"** — esencial para respuestas estables de Gemini.
 
 ### Dónde falló o hubo que corregir la IA
 
-- **Recetas incoherentes** (ej. vegetariano con salchichas): el modelo no es 100% determinista; se mitigó con etiquetas estrictas pero no desaparece del todo.
-- **Títulos demasiado creativos** para búsqueda de imágenes: resuelto con campo dedicado, no reutilizando el copy del plato.
-- **Código generado a veces inconsistente** con el estilo del repo: revisión manual y refactors focalizados.
-- **Sugerencias de over-engineering** (helpers innecesarios, abstracciones prematuras): se descartaron siguiendo el principio de diff mínimo.
+- **Código inconsistente con el estilo del repo**: Cursor a veces generaba convenciones distintas al resto del proyecto. Se revisó manualmente y se refactorizó.
+- **Over-engineering**: sugerencias de abstracciones innecesarias. Se descartaron siguiendo el principio de diff mínimo.
+- **Recetas incoherentes**: Gemini no es 100% determinista; aparecieron casos de recetas "vegetarianas" con carne. Se mitigó con etiquetas `OBLIGATORIO`.
+- **Imágenes desalineadas**: el modelo generaba títulos creativos que confundían a Unsplash. Resuelto con el campo dedicado `busqueda_imagen`.
+- **CORS en producción**: Claude ayudó a diagnosticar que FastAPI tiene `strict_content_type=True` por defecto, bloqueando los preflight OPTIONS.
+
+### Programar y diseñar
+
+| Tarea                   | Herramienta     | Resultado                                                                      |
+| ----------------------- | --------------- | ------------------------------------------------------------------------------ |
+| Arquitectura full-stack | Cursor          | Migración de prototipo frontend-only a monorepo con FastAPI, PostgreSQL y JWT  |
+| Estructura de carpetas  | Cursor          | Convenciones `core/`, `models/`, `schemas/`, `services/` alineadas con FastAPI |
+| Integración Gemini      | Cursor + Gemini | `gemini_service.py`, schema de filtros y endpoint `/api/recetas`               |
+| UI/UX                   | Cursor          | FilterPanel, RecipeCard, dark mode y navegación móvil                          |
+| Campo `busqueda_imagen` | Claude + Gemini | Diagnóstico del problema + diseño del campo en el prompt                       |
+
+### Depurar
+
+| Problema                  | Herramienta     | Solución                                                               |
+| ------------------------- | --------------- | ---------------------------------------------------------------------- |
+| CORS en producción        | Claude          | Diagnóstico de `strict_content_type=True`; fix con `False`             |
+| Imágenes incorrectas      | Gemini + Claude | Campo `busqueda_imagen` en prompt + refactor de `useRecipeImage`       |
+| Gemini 429 / limit: 0     | Cursor          | Reintentos con backoff exponencial en `gemini_service.py`              |
+| `VITE_API_URL` en CI      | Claude          | Variable no cargada antes del build; redeploy con variable configurada |
+| Vercel CLI desactualizada | Claude          | Reemplazo de `amondnet/vercel-action` por `vercel@latest` directo      |
+
+### Documentar
+
+| Actividad                       | Herramienta                                             |
+| ------------------------------- | ------------------------------------------------------- |
+| README, INFORME, DEPLOY         | Claude — redacción alineada a los requerimientos del TP |
+| Agentes de IA en GitHub Actions | Claude — diseño y código de los 3 workflows             |
 
 ---
 
@@ -108,7 +138,7 @@ Esta sección describe **cómo las herramientas de IA participaron en el ciclo d
                 │
                 ▼
 ┌───────────────────────────┐      ┌─────────────────────────────┐
-│  PostgreSQL               │      │  Google Gemini API          │
+│  PostgreSQL (Render)      │      │  Google Gemini API          │
 │  users · recipes          │      │  prompt + JSON de recetas   │
 │  community_recipes        │      └─────────────────────────────┘
 └───────────────────────────┘
@@ -117,26 +147,24 @@ Esta sección describe **cómo las herramientas de IA participaron en el ciclo d
 Principios de seguridad:
 
 - **`GEMINI_API_KEY` y `JWT_SECRET_KEY` solo en el backend** — nunca en el browser.
-- **`VITE_UNSPLASH_ACCESS_KEY` en el frontend** — key pública de solo lectura; aceptable para búsqueda de fotos.
+- **`VITE_UNSPLASH_ACCESS_KEY` en el frontend** — key pública de solo lectura.
 - **Endpoints protegidos** con `Depends(get_current_user)` para generar, favoritos y compartir.
 
 ---
 
 ## Flujo de generación de recetas
 
-### Paso a paso (runtime)
-
 1. El usuario autenticado envía `POST /api/recetas` con `{ ingredientes, filtros }`.
-2. El backend aplica `apply_dieta_preferida()`: si `filtros.dieta === "ninguna"` y el usuario tiene dieta en perfil, la usa automáticamente.
+2. El backend aplica `apply_dieta_preferida()`: si el usuario tiene dieta en perfil y no eligió otra, la aplica automáticamente.
 3. `GeminiService.build_prompt()` arma el prompt con todas las restricciones.
 4. Gemini responde JSON; el backend limpia markdown (`clean_json_response`), parsea y ejecuta `ensure_image_query()` en cada receta.
 5. El frontend recibe `{ recetas: [...] }` y renderiza `RecipeCard` por cada una.
-6. `useRecipeImage` busca en Unsplash usando `busqueda_imagen` (fallback: ingredientes principales o primeras palabras del nombre).
+6. `useRecipeImage` busca en Unsplash usando `busqueda_imagen`.
 
 ### Reintentos y errores
 
-- Hasta **3 intentos** si Gemini devuelve 429 (rate limit), con backoff exponencial.
-- Error explícito si la API key no tiene free tier (`limit: 0`).
+- Hasta **3 intentos** si Gemini devuelve 429, con backoff exponencial.
+- Error explícito si la API key no tiene cuota disponible (`limit: 0`).
 - `JSONDecodeError` → HTTP 500 con mensaje claro al usuario.
 
 ---
@@ -145,25 +173,23 @@ Principios de seguridad:
 
 ### JWT
 
-| Paso | Acción |
-|------|--------|
-| 1 | `POST /auth/register` crea usuario con contraseña hasheada (bcrypt via passlib) |
-| 2 | `POST /auth/login` devuelve `{ access_token }` |
-| 3 | Frontend guarda token en `localStorage` (`foodalchemy_token`) |
-| 4 | `apiFetch()` adjunta `Authorization: Bearer <token>` en cada request |
-| 5 | `GET/PATCH /auth/me` para perfil y dieta preferida |
+| Paso | Acción                                                                          |
+| ---- | ------------------------------------------------------------------------------- |
+| 1    | `POST /auth/register` crea usuario con contraseña hasheada (bcrypt via passlib) |
+| 2    | `POST /auth/login` devuelve `{ access_token }`                                  |
+| 3    | Frontend guarda token en `localStorage` (`foodalchemy_token`)                   |
+| 4    | `apiFetch()` adjunta `Authorization: Bearer <token>` en cada request            |
+| 5    | `GET/PATCH /auth/me` para perfil y dieta preferida                              |
 
-Token por defecto: **7 días** (`ACCESS_TOKEN_EXPIRE_MINUTES=10080`).
+Token por defecto: **7 días**.
 
 ### Qué se guarda en PostgreSQL
 
-| Entidad | Tabla | Contenido |
-|---------|-------|-----------|
-| Usuario | `users` | email, nombre, dieta_preferida |
-| Favorito | `recipes` | `title` + `content` (JSONB con receta completa) |
-| Comunidad | `community_recipes` | receta + autor + timestamp; máx. 100 entradas (FIFO) |
-
-Las tablas se crean con `Base.metadata.create_all()` al arrancar la API. Alembic está configurado para migraciones futuras.
+| Entidad   | Tabla               | Contenido                                       |
+| --------- | ------------------- | ----------------------------------------------- |
+| Usuario   | `users`             | email, nombre, dieta_preferida                  |
+| Favorito  | `recipes`           | `title` + `content` (JSONB con receta completa) |
+| Comunidad | `community_recipes` | receta + autor + timestamp                      |
 
 ---
 
@@ -174,66 +200,35 @@ User (1) ──< (N) Recipe
 User (1) ──< (N) CommunityRecipe
 ```
 
-**Recipe.content** y **CommunityRecipe.content** almacenan el objeto receta completo:
-
-```json
-{
-  "nombre": "...",
-  "busqueda_imagen": "stuffed tomatoes",
-  "emoji": "🍝",
-  "descripcion": "...",
-  "tiempo_minutos": 25,
-  "porciones": 2,
-  "dificultad": "fácil",
-  "calorias_aprox": 350,
-  "ingredientes_usados": ["..."],
-  "ingredientes_extra": ["..."],
-  "pasos": ["..."],
-  "tip_chef": "..."
-}
-```
+**Recipe.content** almacena el objeto receta completo en JSONB — flexible para evolucionar el schema sin migraciones.
 
 ---
 
 ## Prompt engineering
 
-El prompt en `gemini_service.py` se iteró varias veces. Los elementos más efectivos:
+### Estructura del prompt
 
-### 1. Restricción de formato estricta
+```
+Restricciones a respetar OBLIGATORIAMENTE:
+- Dieta: vegetariano — OBLIGATORIO: sin carne, pescado ni mariscos
+- Momento del día: desayuno — OBLIGATORIO: platos ligeros para la mañana
+- Tipo de plato: dulce — OBLIGATORIO: no platos salados
+```
+
+Separar cada restricción en su propia línea con etiqueta explícita mejoró el cumplimiento respecto a instrucciones mezcladas en prosa.
+
+### Formato JSON estricto
 
 ```
 Responde ÚNICAMENTE con un objeto JSON válido, sin texto adicional antes o después.
-No uses bloques de código markdown (sin ```json).
+No uses bloques de código markdown.
 ```
 
-Sin esto, el modelo a veces envuelve la respuesta en backticks y rompe `json.loads()`. Se añadió además `clean_json_response()` como red de seguridad.
+Se agregó `clean_json_response()` como red de seguridad adicional para limpiar backticks.
 
-### 2. Sección "Restricciones a respetar OBLIGATORIAMENTE"
+### Campo `busqueda_imagen`
 
-Separar dieta, momento, sabor, porciones, complejidad y tiempo en una lista explícita mejoró el cumplimiento de filtros respecto a mezclarlos en prosa.
-
-Etiquetas con refuerzo negativo ayudan a Gemini:
-
-```
-vegetariano — OBLIGATORIO: sin carne, pescado ni mariscos
-dulce — OBLIGATORIO: postres, dulces... no platos salados
-```
-
-### 3. Esquema JSON completo en el prompt
-
-Incluir el formato esperado con tipos y un ejemplo reduce campos faltantes y errores de estructura.
-
-### 4. Campo `busqueda_imagen`
-
-Pedir 2–4 palabras en **inglés** orientadas al plato visible evita que el frontend busque en Unsplash con títulos largos y creativos (ej. "emulsión de chocolate" dominando la búsqueda).
-
-Fallback server-side en `ensure_image_query()` si Gemini omite el campo.
-
-### 5. Reglas de negocio en lenguaje natural
-
-- Maximizar uso de ingredientes listados.
-- `ingredientes_extra` solo para básicos de cocina no listados.
-- Generar las recetas que se puedan si no alcanzan 3 con todas las restricciones.
+Pedir 2-4 palabras en inglés orientadas al plato visible evita búsquedas confusas en Unsplash. Fallback server-side en `ensure_image_query()` si Gemini omite el campo.
 
 ---
 
@@ -241,19 +236,17 @@ Fallback server-side en `ensure_image_query()` si Gemini omite el campo.
 
 ### Problema inicial
 
-La búsqueda usaba el **nombre completo** de la receta + `" food dish"`, con `per_page: 1`. Títulos creativos de Gemini confundían a Unsplash (ej. foto de brownie para tomates rellenos porque aparecía "chocolate").
+La búsqueda usaba el nombre completo de la receta. Títulos creativos de Gemini confundían a Unsplash.
 
 ### Solución implementada
 
-| Capa | Comportamiento |
-|------|----------------|
-| Gemini | Genera `busqueda_imagen` corta en inglés |
-| Backend | `ensure_image_query()` completa si falta |
-| Frontend | `resolveImageQuery()` → prioridad: `busqueda_imagen` > 2 ingredientes > 3 palabras del nombre |
-| Unsplash | Query `"${query} food"`, `per_page: 3`, orientación landscape |
-| Cache | `Map` en memoria por query para no repetir requests |
-
-Recetas guardadas antes de este cambio usan el fallback automáticamente.
+| Capa     | Comportamiento                                                        |
+| -------- | --------------------------------------------------------------------- |
+| Gemini   | Genera `busqueda_imagen` corta en inglés                              |
+| Backend  | `ensure_image_query()` completa si falta                              |
+| Frontend | Prioridad: `busqueda_imagen` > 2 ingredientes > 3 palabras del nombre |
+| Unsplash | Query `"${query} food"`, `per_page: 3`, orientación landscape         |
+| Cache    | `Map` en memoria por query para no repetir requests                   |
 
 ---
 
@@ -261,118 +254,97 @@ Recetas guardadas antes de este cambio usan el fallback automáticamente.
 
 ### Proxy de Vite en desarrollo
 
-`vite.config.ts` proxea `/auth`, `/api` y `/recipes` a `127.0.0.1:8000`. Con `VITE_API_URL` vacío, las requests son same-origin → **sin problemas de CORS en local**.
+`vite.config.ts` proxea `/auth`, `/api` y `/recipes` a `127.0.0.1:8000`. Con `VITE_API_URL` vacío, las requests son same-origin — sin problemas de CORS en local.
 
 ### Contextos globales
 
 - **AuthContext** — sesión, login/logout, carga de perfil.
 - **ThemeContext** — dark mode persistente.
-- **ToastContext** — feedback no intrusivo (guardar, copiar, errores).
+- **ToastContext** — feedback no intrusivo.
 
 ### Rutas y permisos
 
-| Ruta | Auth |
-|------|------|
-| `/`, `/favoritos`, `/perfil` | Requerida (`ProtectedRoute`) |
-| `/comunidad` | Pública (lectura); compartir requiere login |
-| `/login`, `/register` | Públicas |
-
-### Filtros actuales
-
-```typescript
-interface Filtros {
-  dieta: 'ninguna' | 'vegetariano' | 'vegano' | 'sin_gluten' | 'sin_lactosa'
-  porciones: number
-  complejidad: 'cualquiera' | 'fácil' | 'intermedio' | 'difícil'
-  tiempo_max: number
-  momento: 'cualquiera' | 'desayuno' | 'almuerzo' | 'cena'
-  sabor: 'cualquiera' | 'dulce' | 'salado'
-}
-```
+| Ruta                         | Auth                                        |
+| ---------------------------- | ------------------------------------------- |
+| `/`, `/favoritos`, `/perfil` | Requerida (`ProtectedRoute`)                |
+| `/comunidad`                 | Pública (lectura); compartir requiere login |
+| `/login`, `/register`        | Públicas                                    |
 
 ---
 
 ## Desafíos encontrados
 
-### CORS y `VITE_API_URL`
+### CORS en producción
 
-- En dev: proxy de Vite + `VITE_API_URL=` vacío.
-- En prod: `CORS_ORIGINS` en backend debe incluir el dominio de Vercel.
-- Error común: `VITE_API_URL=https://tu-backend.onrender.com` en local → **Failed to fetch** (CORS o backend inexistente). Solución: dejar vacío en desarrollo.
+El problema más complejo del deploy. FastAPI versiones recientes tienen `strict_content_type=True` por defecto, rechazando los preflight OPTIONS antes de que el middleware CORS los procese. Los logs de Render mostraban `400 Bad Request` en cada OPTIONS request. Diagnosticado con Claude. Solución: `strict_content_type=False` en la creación del app.
 
-### Migración Claude → Gemini
+### Vercel CLI desactualizada en CI
 
-- Cambio de SDK y formato de respuesta.
-- Gemini free tier puede devolver `limit: 0` con keys sin cuota; mensaje de error orienta a crear key nueva en AI Studio.
-- Rate limits 429: reintentos con backoff.
-
-### Respuestas inconsistentes del modelo
-
-Con pocos ingredientes y filtros muy restrictivos, a veces llegan 1–2 recetas en lugar de 3. El frontend muestra las que vengan sin romper la UI.
-
-### Inconsistencias ocasionales de Gemini
-
-Ejemplos observados: badge vegetariano con salchichas en ingredientes. Mitigación parcial con etiquetas `OBLIGATORIO` en el prompt; no es 100% determinista.
+El action `amondnet/vercel-action@v25` usa Vercel CLI 25, pero Vercel ahora requiere la versión 47+. Solucionado instalando `vercel@latest` directamente en el step del workflow.
 
 ### Imágenes desalineadas con el plato
 
-Resuelto con `busqueda_imagen`. Persiste variabilidad de Unsplash según stock fotográfico.
+Búsquedas con títulos creativos de Gemini devolvían fotos incorrectas. Resuelto con el campo `busqueda_imagen` en el prompt y lógica de fallback en tres niveles en `useRecipeImage`.
 
-### PostgreSQL en Docker (Windows)
+### Recetas inconsistentes del modelo
 
-Puerto host **5444** (no 5432) para evitar conflictos con instalaciones locales de Postgres. Documentado en README y `.env.example`.
+Con filtros muy restrictivos, Gemini a veces devuelve menos de 3 recetas o ignora restricciones. Mitigado con etiquetas `OBLIGATORIO`; el frontend muestra las recetas que lleguen sin romper la UI.
+
+### Variable de entorno no disponible en build
+
+`VITE_API_URL` fue agregada a Vercel después del primer deploy, compilándose vacía. El frontend apuntaba a `localhost` en producción. Solución: redeploy después de cargar la variable.
 
 ---
 
 ## Lecciones aprendidas
 
-1. **Separar frontend y backend vale la pena** — protege API keys, permite cambiar modelo de IA sin tocar el cliente y habilita auth + persistencia real.
+1. **Las herramientas de IA se complementan** — Cursor es ágil para escribir código nuevo; Claude es mejor para diagnosticar bugs complejos; Gemini ayuda en el diseño de prompts.
 
-2. **El prompt es iterativo** — cada filtro nuevo (momento, sabor) requirió su propia etiqueta en el prompt, no solo un campo más en el JSON del request.
+2. **El prompt es iterativo** — cada filtro nuevo requirió su propia etiqueta explícita, no solo un campo más en el request.
 
-3. **Siempre validar output del LLM** — limpieza de markdown, fallback de `busqueda_imagen`, manejo de JSON inválido y rate limits.
+3. **Siempre validar output del LLM** — limpieza de markdown, fallback de `busqueda_imagen`, manejo de JSON inválido y rate limits son necesarios en producción.
 
-4. **No confiar en títulos creativos para búsquedas externas** — un campo dedicado (`busqueda_imagen`) diseñado para otro sistema (Unsplash) funciona mejor que reutilizar copy de marketing.
+4. **No confiar en títulos creativos para búsquedas externas** — un campo dedicado diseñado específicamente para Unsplash funciona mucho mejor.
 
-5. **Proxy en dev simplifica la vida** — menos horas debuggeando CORS que configurando orígenes para cada puerto.
+5. **Proxy en dev simplifica la vida** — menos tiempo debuggeando CORS que configurando orígenes para cada entorno.
 
-6. **Persistir recetas como JSONB** — flexible para evolucionar el schema de receta sin migraciones por cada campo nuevo; el frontend tipa con TypeScript.
+6. **Persistir recetas como JSONB** — flexible para evolucionar el schema sin migraciones.
 
-7. **Dieta preferida en perfil** — mejora UX sin forzar al usuario a reconfigurar filtros en cada búsqueda.
+7. **El deploy tiene sus propias trampas** — variables de entorno, versiones de CLI y configuraciones de CORS son detalles que rompen la app en producción aunque todo funcione en local.
 
 ---
 
-## CI/CD y deploy
+## CI/CD y agentes de IA
 
-Workflow: `.github/workflows/ci.yml` (nombre: **CI/CD — FoodAlchemy**).
+### Workflow principal (`ci.yml`)
 
-### En cada push / PR a `main`
-
-| Job | Pasos |
-|-----|-------|
+| Job          | Pasos                                                                     |
+| ------------ | ------------------------------------------------------------------------- |
 | **Frontend** | `npm ci` → `tsc --noEmit` → `vite build` → deploy Vercel (solo en `main`) |
-| **Backend** | `pip install` → syntax check de módulos clave → Render autodeploy desde GitHub |
+| **Backend**  | `pip install` → syntax check → Render autodeploy desde GitHub             |
 
-### Secrets de GitHub
+### Agentes autónomos
 
-- `VERCEL_TOKEN`
-- `VERCEL_ORG_ID`
-- `VERCEL_PROJECT_ID`
+| Workflow                     | Disparador                     | Qué hace                                                                                      |
+| ---------------------------- | ------------------------------ | --------------------------------------------------------------------------------------------- |
+| `ai_generador_changelog.yml` | Push a `main`                  | Toma los últimos 5 commits, los procesa con Gemini y actualiza `CHANGELOG.md` automáticamente |
+| `ai_pr_review.yml`           | PR abierto o actualizado       | Analiza el diff con Gemini y comenta en el PR con análisis de código                          |
+| `ai_security_audit.yml`      | Push a `main` + cron lunes 9am | Corre Bandit + Safety, manda resultados a Gemini, crea issue si hay problemas                 |
 
-### Deploy manual (resumen)
+### URLs de producción
 
-1. PostgreSQL en Render → `DATABASE_URL` con `postgresql+psycopg2://`
-2. Web Service backend en Render (`backend/`, uvicorn)
-3. Frontend en Vercel (`frontend/`, `VITE_API_URL` apuntando al backend)
-4. `CORS_ORIGINS` = URL de producción del frontend
-
-Guía detallada paso a paso: [DEPLOY.md](./DEPLOY.md) · Resumen en [README.md](./README.md#deploy-en-producción-paso-a-paso)
+| Servicio        | URL                                      |
+| --------------- | ---------------------------------------- |
+| **Frontend**    | https://integradorgs-frontend.vercel.app |
+| **Backend API** | https://integrador-gs.onrender.com       |
+| **Swagger**     | https://integrador-gs.onrender.com/docs  |
 
 ---
 
 ## Referencias
 
 - [README.md](./README.md) — instalación, uso y deploy
+- [DEPLOY.md](./DEPLOY.md) — guía de deploy paso a paso
 - [Google AI Studio](https://aistudio.google.com/apikey) — API key Gemini
 - [Unsplash Developers](https://unsplash.com/developers) — access key para imágenes
 - Swagger local: `http://localhost:8000/docs`
