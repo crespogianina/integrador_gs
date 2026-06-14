@@ -35,7 +35,7 @@ jobs:
           COMMITS="${{ steps.commits.outputs.commits }}"
           DATE="${{ steps.commits.outputs.date }}"
           SHA="${{ steps.commits.outputs.sha }}"
-          
+
           RESPONSE=$(curl -s \
             "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}" \
             -H "Content-Type: application/json" \
@@ -46,7 +46,7 @@ jobs:
                 }]
               }]
             }")
-          
+
           ENTRY=$(echo $RESPONSE | python3 -c "
           import sys, json
           data = json.load(sys.stdin)
@@ -54,9 +54,9 @@ jobs:
               text = data['candidates'][0]['content']['parts'][0]['text']
               print(text)
           except:
-              print('## [${{ steps.commits.outputs.date }}] — ${{ steps.commits.outputs.sha }}\n\n### Cambios\n- Actualización del proyecto\n\n---')
+              print('## Sin cambios\n\n### Cambios\n- Actualización del proyecto\n\n---')
           ")
-          
+
           echo "entry<<EOF" >> $GITHUB_OUTPUT
           echo "$ENTRY" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
@@ -64,25 +64,26 @@ jobs:
       - name: Actualizar CHANGELOG.md
         run: |
           NEW_ENTRY="${{ steps.changelog_entry.outputs.entry }}"
-          
+
           if [ -f CHANGELOG.md ]; then
-            # Insertar nueva entrada al principio (después del título)
             HEADER=$(head -4 CHANGELOG.md)
             REST=$(tail -n +5 CHANGELOG.md)
-            echo "$HEADER" > CHANGELOG.md
-            echo "" >> CHANGELOG.md
-            echo "$NEW_ENTRY" >> CHANGELOG.md
-            echo "" >> CHANGELOG.md
-            echo "$REST" >> CHANGELOG.md
+            {
+              echo "$HEADER"
+              echo ""
+              echo "$NEW_ENTRY"
+              echo ""
+              echo "$REST"
+            } > CHANGELOG_tmp.md
+            mv CHANGELOG_tmp.md CHANGELOG.md
           else
-            # Crear CHANGELOG nuevo
-            cat > CHANGELOG.md << CHANGELOG
-# Changelog — FoodAlchemy
-
-Historial de cambios generado automáticamente por IA.
-
-$NEW_ENTRY
-CHANGELOG
+            {
+              echo "# Changelog — FoodAlchemy"
+              echo ""
+              echo "Historial de cambios generado automáticamente por IA."
+              echo ""
+              echo "$NEW_ENTRY"
+            } > CHANGELOG.md
           fi
 
       - name: Commit del changelog
