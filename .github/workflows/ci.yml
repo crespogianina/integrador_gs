@@ -7,7 +7,6 @@ on:
     branches: [main]
 
 jobs:
-  # ── Frontend ────────────────────────────────────────────────────────────────
   frontend:
     name: FoodAlchemy — Frontend (type check & build)
     runs-on: ubuntu-latest
@@ -20,8 +19,8 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          cache: 'npm'
+          node-version: "22"
+          cache: "npm"
           cache-dependency-path: frontend/package-lock.json
 
       - name: Install dependencies
@@ -33,20 +32,17 @@ jobs:
       - name: Build
         run: npm run build
         env:
-          # En CI no hay backend local; build con URL vacía (Vercel inyecta la real en deploy)
-          VITE_API_URL: ''
+          VITE_API_URL: ""
 
       - name: Deploy to Vercel
         if: github.ref == 'refs/heads/main'
-        uses: amondnet/vercel-action@v25
-        with:
-          vercel-token: ${{ secrets.VERCEL_TOKEN }}
-          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
-          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
-          working-directory: frontend
-          vercel-args: '--prod'
+        run: |
+          npm install -g vercel@latest
+          vercel --prod --token=${{ secrets.VERCEL_TOKEN }} --yes
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
 
-  # ── Backend ─────────────────────────────────────────────────────────────────
   backend:
     name: FoodAlchemy — Backend (syntax check)
     runs-on: ubuntu-latest
@@ -59,7 +55,7 @@ jobs:
 
       - uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: "3.11"
 
       - name: Install dependencies
         run: pip install -r requirements.txt
@@ -70,5 +66,3 @@ jobs:
           python -m py_compile services/gemini_service.py
           python -m py_compile api/v1/endpoints/auth.py
           echo "Syntax OK"
-
-      # Render hace autodeploy desde GitHub al conectar el repo; no requiere step extra aquí.
