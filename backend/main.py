@@ -15,7 +15,12 @@ async def lifespan(_: FastAPI):
     yield
 
 
-app = FastAPI(title="FoodAlchemy API", version="1.0.0", lifespan=lifespan)
+app = FastAPI(
+    title="FoodAlchemy API", 
+    version="1.0.0", 
+    lifespan=lifespan,
+    strict_content_type=False
+)
 
 app.add_middleware(
     CORSMiddleware,
