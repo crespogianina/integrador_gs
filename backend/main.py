@@ -17,14 +17,9 @@ async def lifespan(_: FastAPI):
 
 app = FastAPI(title="FoodAlchemy API", version="1.0.0", lifespan=lifespan)
 
-if settings.CORS_ORIGINS == "*":
-    origins = ["*"]  # ← cambiá esto
-else:
-    origins = [o.strip() for o in settings.CORS_ORIGINS.split(",") if o.strip()]
-
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    allow_origins=["*"],
     allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
