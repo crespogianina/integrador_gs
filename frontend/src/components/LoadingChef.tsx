@@ -1,3 +1,5 @@
+import { ChefHat } from 'lucide-react'
+
 const frases = [
   'Revisando la heladera virtual...',
   'Consultando al chef con IA...',
@@ -9,7 +11,9 @@ const frases = [
 export function LoadingChef() {
   return (
     <div className="flex flex-col items-center justify-center py-20 gap-5">
-      <div className="text-6xl animate-bounce-sm">🍳</div>
+      <div className="w-16 h-16 rounded-2xl bg-gold/15 border border-gold/25 flex items-center justify-center animate-bounce-sm">
+        <ChefHat className="w-8 h-8 text-gold" strokeWidth={1.75} />
+      </div>
       <div className="text-center">
         <p className="font-display text-bark font-bold text-xl mb-1">Cocinando con IA...</p>
         <p className="font-body text-muted text-sm">{frases[Math.floor(Math.random() * frases.length)]}</p>

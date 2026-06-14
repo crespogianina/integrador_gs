@@ -1,0 +1,16 @@
+{
+  "name": "FoodAlchemy",
+  "short_name": "FoodAlchemy",
+  "description": "Generá recetas con IA usando lo que tenés en la heladera",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#fdf6ec",
+  "theme_color": "#e67e22",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}
