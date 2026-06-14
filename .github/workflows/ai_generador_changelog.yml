@@ -1,0 +1,94 @@
+name: Agente IA — Generador de Changelog
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  generate-changelog:
+    name: Actualizar CHANGELOG con IA
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 10
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Obtener commits recientes
+        id: commits
+        run: |
+          COMMITS=$(git log -5 --pretty=format:"- %s (%an)" HEAD)
+          echo "commits<<EOF" >> $GITHUB_OUTPUT
+          echo "$COMMITS" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+          echo "date=$(date +'%Y-%m-%d')" >> $GITHUB_OUTPUT
+          echo "sha=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+
+      - name: Generar entrada de changelog con Gemini
+        id: changelog_entry
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          COMMITS="${{ steps.commits.outputs.commits }}"
+          DATE="${{ steps.commits.outputs.date }}"
+          SHA="${{ steps.commits.outputs.sha }}"
+          
+          RESPONSE=$(curl -s \
+            "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}" \
+            -H "Content-Type: application/json" \
+            -d "{
+              \"contents\": [{
+                \"parts\": [{
+                  \"text\": \"Eres un asistente técnico. A partir de estos commits de git, genera una entrada de CHANGELOG en español, concisa y orientada al usuario final.\n\nCommits:\n${COMMITS}\n\nFormato de respuesta (solo esto, sin texto adicional):\n## [${DATE}] — ${SHA}\n\n### Cambios\n- [lista de cambios en lenguaje claro para el usuario]\n\n---\"
+                }]
+              }]
+            }")
+          
+          ENTRY=$(echo $RESPONSE | python3 -c "
+          import sys, json
+          data = json.load(sys.stdin)
+          try:
+              text = data['candidates'][0]['content']['parts'][0]['text']
+              print(text)
+          except:
+              print('## [${{ steps.commits.outputs.date }}] — ${{ steps.commits.outputs.sha }}\n\n### Cambios\n- Actualización del proyecto\n\n---')
+          ")
+          
+          echo "entry<<EOF" >> $GITHUB_OUTPUT
+          echo "$ENTRY" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Actualizar CHANGELOG.md
+        run: |
+          NEW_ENTRY="${{ steps.changelog_entry.outputs.entry }}"
+          
+          if [ -f CHANGELOG.md ]; then
+            # Insertar nueva entrada al principio (después del título)
+            HEADER=$(head -4 CHANGELOG.md)
+            REST=$(tail -n +5 CHANGELOG.md)
+            echo "$HEADER" > CHANGELOG.md
+            echo "" >> CHANGELOG.md
+            echo "$NEW_ENTRY" >> CHANGELOG.md
+            echo "" >> CHANGELOG.md
+            echo "$REST" >> CHANGELOG.md
+          else
+            # Crear CHANGELOG nuevo
+            cat > CHANGELOG.md << CHANGELOG
+# Changelog — FoodAlchemy
+
+Historial de cambios generado automáticamente por IA.
+
+$NEW_ENTRY
+CHANGELOG
+          fi
+
+      - name: Commit del changelog
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add CHANGELOG.md
+          git diff --staged --quiet || git commit -m "docs: actualizar CHANGELOG automáticamente [skip ci]"
+          git push

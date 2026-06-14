@@ -1,0 +1,132 @@
+name: Agente IA — Auditoría de Seguridad
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    # Corre todos los lunes a las 9am UTC
+    - cron: "0 9 * * 1"
+
+jobs:
+  security-audit:
+    name: Auditoría automática con IA
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Instalar herramientas de análisis
+        run: |
+          pip install bandit safety --quiet
+
+      - name: Ejecutar Bandit (análisis estático Python)
+        id: bandit
+        continue-on-error: true
+        run: |
+          bandit -r backend/ \
+            --exclude backend/venv \
+            -f json \
+            -o bandit_report.json 2>/dev/null || true
+
+          if [ -f bandit_report.json ]; then
+            ISSUES=$(python3 -c "
+          import json
+          with open('bandit_report.json') as f:
+              data = json.load(f)
+          results = data.get('results', [])
+          if not results:
+              print('Sin problemas detectados por Bandit.')
+          else:
+              for r in results[:5]:
+                  print(f\"- [{r['issue_severity']}] {r['issue_text']} en {r['filename']}:{r['line_number']}\")
+          ")
+            echo "issues<<EOF" >> $GITHUB_OUTPUT
+            echo "$ISSUES" >> $GITHUB_OUTPUT
+            echo "EOF" >> $GITHUB_OUTPUT
+          else
+            echo "issues=Sin problemas detectados." >> $GITHUB_OUTPUT
+          fi
+
+      - name: Verificar dependencias Python vulnerables
+        id: safety
+        continue-on-error: true
+        run: |
+          cd backend
+          pip install -r requirements.txt --quiet 2>/dev/null || true
+          SAFETY_OUTPUT=$(safety check --json 2>/dev/null || echo '[]')
+          VULNS=$(echo $SAFETY_OUTPUT | python3 -c "
+          import sys, json
+          try:
+              data = json.load(sys.stdin)
+              if not data:
+                  print('Sin vulnerabilidades conocidas en dependencias.')
+              else:
+                  for v in data[:3]:
+                      print(f'- {v[0]} {v[2]}: {v[3][:100]}')
+          except:
+              print('Sin vulnerabilidades conocidas en dependencias.')
+          ")
+          echo "vulns<<EOF" >> $GITHUB_OUTPUT
+          echo "$VULNS" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Análisis con Gemini
+        id: ai_analysis
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          BANDIT="${{ steps.bandit.outputs.issues }}"
+          SAFETY="${{ steps.safety.outputs.vulns }}"
+
+          RESPONSE=$(curl -s \
+            "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}" \
+            -H "Content-Type: application/json" \
+            -d "{
+              \"contents\": [{
+                \"parts\": [{
+                  \"text\": \"Eres un experto en seguridad de aplicaciones web. Analiza estos resultados de auditoría de seguridad del proyecto FoodAlchemy (FastAPI + React + PostgreSQL + JWT).\n\nResultados Bandit (análisis estático Python):\n${BANDIT}\n\nVulnerabilidades en dependencias (Safety):\n${SAFETY}\n\nResponde en español con este formato:\n\n## 🔒 Resumen de seguridad\n[Evaluación general en 1-2 oraciones]\n\n## ⚠️ Problemas encontrados\n[Lista de problemas o 'Sin problemas críticos detectados']\n\n## 💡 Recomendaciones\n[2-3 recomendaciones de seguridad para este tipo de app]\n\n## ✅ Estado general\n[SEGURO / REQUIERE ATENCIÓN / CRÍTICO]\"
+                }]
+              }]
+            }")
+
+          ANALYSIS=$(echo $RESPONSE | python3 -c "
+          import sys, json
+          data = json.load(sys.stdin)
+          try:
+              text = data['candidates'][0]['content']['parts'][0]['text']
+              print(text)
+          except:
+              print('## 🔒 Auditoría de seguridad\n\nNo se pudo generar el análisis automático.')
+          ")
+
+          echo "analysis<<EOF" >> $GITHUB_OUTPUT
+          echo "$ANALYSIS" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Crear issue si hay problemas
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const analysis = `${{ steps.ai_analysis.outputs.analysis }}`;
+            const date = new Date().toISOString().split('T')[0];
+
+            // Solo crear issue si hay problemas reales
+            if (analysis.includes('REQUIERE ATENCIÓN') || analysis.includes('CRÍTICO')) {
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: `🔒 Auditoría de seguridad — ${date}`,
+                body: `${analysis}\n\n---\n*Generado automáticamente por el agente de seguridad IA*`,
+                labels: ['security', 'automated'],
+              });
+            } else {
+              console.log('Sin problemas críticos. No se crea issue.');
+              console.log(analysis);
+            }
