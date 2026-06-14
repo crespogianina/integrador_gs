@@ -18,12 +18,7 @@ async def lifespan(_: FastAPI):
 app = FastAPI(title="FoodAlchemy API", version="1.0.0", lifespan=lifespan)
 
 if settings.CORS_ORIGINS == "*":
-    origins = [
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
-        "http://localhost:4173",
-        "http://127.0.0.1:4173",
-    ]
+    origins = ["*"]  # ← cambiá esto
 else:
     origins = [o.strip() for o in settings.CORS_ORIGINS.split(",") if o.strip()]
 
