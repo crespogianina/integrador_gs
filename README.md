@@ -7,16 +7,17 @@ Generá recetas con IA a partir de los ingredientes que tenés en la heladera. L
 ## Tabla de contenidos
 
 1. [Funcionalidades](#funcionalidades)
-2. [Stack tecnológico](#stack-tecnológico)
-3. [Estructura del proyecto](#estructura-del-proyecto)
-4. [Requisitos previos](#requisitos-previos)
-5. [Instalación local (paso a paso)](#instalación-local-paso-a-paso)
-6. [Uso de la aplicación (paso a paso)](#uso-de-la-aplicación-paso-a-paso)
-7. [Variables de entorno](#variables-de-entorno)
-8. [API](#api)
-9. [Deploy en producción (paso a paso)](#deploy-en-producción-paso-a-paso)
-10. [CI/CD](#cicd)
-11. [Informe técnico](#informe-técnico)
+2. [Demo en vivo](#demo-en-vivo)
+3. [Stack tecnológico](#stack-tecnológico)
+4. [Estructura del proyecto](#estructura-del-proyecto)
+5. [Requisitos previos](#requisitos-previos)
+6. [Instalación local (paso a paso)](#instalación-local-paso-a-paso)
+7. [Uso de la aplicación (paso a paso)](#uso-de-la-aplicación-paso-a-paso)
+8. [Variables de entorno](#variables-de-entorno)
+9. [API](#api)
+10. [Deploy en producción (paso a paso)](#deploy-en-producción-paso-a-paso)
+11. [CI/CD](#cicd)
+12. [Informe técnico](#informe-técnico)
 
 ---
 
@@ -43,6 +44,19 @@ Generá recetas con IA a partir de los ingredientes que tenés en la heladera. L
 ### Experiencia
 - Dark mode, toasts, navegación móvil inferior, PWA (`manifest.json`).
 - Comunidad visible sin login; generar, favoritos y perfil requieren cuenta.
+
+---
+
+## Demo en vivo
+
+> Completá estas URLs después del deploy. Guía detallada: **[DEPLOY.md](./DEPLOY.md)**
+
+| Recurso | URL |
+|---------|-----|
+| **App (frontend)** | _pendiente — ej. `https://foodalchemy.vercel.app`_ |
+| **API (backend)** | _pendiente — ej. `https://foodalchemy-api.onrender.com`_ |
+| **Swagger** | _pendiente — ej. `https://foodalchemy-api.onrender.com/docs`_ |
+| **Repositorio** | [github.com/crespogianina/integrador_gs](https://github.com/crespogianina/integrador_gs) |
 
 ---
 
@@ -275,6 +289,9 @@ Documentación interactiva en `/docs` cuando el backend está corriendo.
 
 ## Deploy en producción (paso a paso)
 
+Guía completa con checklist, CORS, secrets de GitHub y troubleshooting: **[DEPLOY.md](./DEPLOY.md)**
+
+Resumen rápido:
 ### Paso 1 — Base de datos en Render
 
 1. Creá una instancia **PostgreSQL** en [Render](https://render.com).
