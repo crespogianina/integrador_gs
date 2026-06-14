@@ -36,9 +36,10 @@ jobs:
 
       - name: Deploy to Vercel
         if: github.ref == 'refs/heads/main'
+        working-directory: ${{ github.workspace }}
         run: |
           npm install -g vercel@latest
-          vercel --prod --token=${{ secrets.VERCEL_TOKEN }} --yes
+          vercel --prod --token=${{ secrets.VERCEL_TOKEN }} --yes --cwd frontend
         env:
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
