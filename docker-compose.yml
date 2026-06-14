@@ -1,0 +1,20 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: foodalchemy_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: foodalchemy
+      POSTGRES_PASSWORD: foodalchemy_dev
+      POSTGRES_DB: foodalchemy
+    ports:
+      - "5444:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U foodalchemy -d foodalchemy"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+volumes:
+  postgres_data:
