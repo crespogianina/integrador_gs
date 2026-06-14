@@ -22,3 +22,10 @@ Historial de cambios generado automáticamente por IA.
 - Actualización del proyecto
 
 ---
+
+## Sin cambios
+
+### Cambios
+- Actualización del proyecto
+
+---
