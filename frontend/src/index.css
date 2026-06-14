@@ -13,6 +13,11 @@
     -webkit-font-smoothing: antialiased;
   }
 
+  html.dark body {
+    background-color: #1a1008;
+    color: #fff9f2;
+  }
+
   input[type='range'] {
     -webkit-appearance: none;
     appearance: none;

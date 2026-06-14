@@ -1,7 +1,6 @@
 import { useState } from 'react'
+import { apiFetch, parseApiError } from '../lib/api'
 import type { Filtros, Receta } from '../types/recipe'
-
-const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8000'
 
 export function useRecipeGenerator() {
   const [recetas, setRecetas] = useState<Receta[]>([])
@@ -14,21 +13,19 @@ export function useRecipeGenerator() {
     setRecetas([])
 
     try {
-      const response = await fetch(`${API_URL}/api/recetas`, {
+      const response = await apiFetch('/api/recetas', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ingredientes, filtros }),
       })
 
       if (!response.ok) {
-        const err = await response.json()
-        throw new Error(err.detail ?? `Error ${response.status}`)
+        throw new Error(await parseApiError(response))
       }
 
       const data = await response.json()
       setRecetas(data.recetas ?? [])
-    } catch (err: any) {
-      setError(err.message ?? 'Error al conectar con el servidor.')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error al conectar con el servidor.')
     } finally {
       setIsLoading(false)
     }

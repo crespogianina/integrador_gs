@@ -1,5 +1,6 @@
 export interface Receta {
   nombre: string
+  busqueda_imagen?: string
   emoji: string
   descripcion: string
   tiempo_minutos: number
@@ -21,6 +22,8 @@ export interface Filtros {
   porciones: number
   complejidad: 'cualquiera' | 'fácil' | 'intermedio' | 'difícil'
   tiempo_max: number
+  momento: 'cualquiera' | 'desayuno' | 'almuerzo' | 'cena'
+  sabor: 'cualquiera' | 'dulce' | 'salado'
 }
 
 export const DEFAULT_FILTROS: Filtros = {
@@ -28,11 +31,15 @@ export const DEFAULT_FILTROS: Filtros = {
   porciones: 2,
   complejidad: 'cualquiera',
   tiempo_max: 60,
+  momento: 'cualquiera',
+  sabor: 'cualquiera',
 }
 
 export interface RecetaCompartida {
+  id?: string
   receta: Receta
   timestamp: string
+  autor_nombre?: string
 }
 
 export const SUGERENCIAS = [

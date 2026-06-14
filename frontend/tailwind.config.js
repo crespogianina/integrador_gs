@@ -1,5 +1,6 @@
 /** @type {import('tailwindcss').Config} */
 export default {
+  darkMode: 'class',
   content: ['./index.html', './src/**/*.{js,ts,jsx,tsx}'],
   theme: {
     extend: {
@@ -14,8 +15,13 @@ export default {
         spice: '#c0392b',
         herb:  '#27ae60',
         gold:  '#e67e22',
+        amber: '#f39c12',
         muted: '#8d6e63',
         card:  '#fff9f2',
+      },
+      boxShadow: {
+        card: '0 4px 24px -4px rgba(44, 26, 14, 0.08)',
+        'card-hover': '0 12px 32px -8px rgba(44, 26, 14, 0.14)',
       },
       animation: {
         'fade-up':    'fadeUp 0.5s ease forwards',
